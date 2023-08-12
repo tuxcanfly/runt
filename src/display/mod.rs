@@ -10,7 +10,8 @@ use tui::layout::Constraint;
 use tui::backend::TermionBackend;
 use tui::Terminal;
 
-use std::io::{Stdout};
+use std::io::Stdout;
+use std::io::BufRead;
 
 #[derive(Debug)]
 struct Widget {
@@ -47,50 +48,10 @@ pub fn display(terminal: &mut Terminal<TermionBackend<Stdout>>, node: &Node, dep
             widgets.push(widget);
         }
         NodeData::Element(ref data) => {
-            if data.name.prefix == None {
-                match &*data.name.local {
-                    "img" => {
-                        let attrs = data.attributes.borrow();
-                        let alt = attrs.get("alt");
-                        if let Some(alt) = alt {
-                            print!(r#"<img alt="{}">"#, alt);
-                        } else {
-                            print!("<img>");
-                        }
-                        return;
-                    }
-                    "script" | "head" | "style" => {
-                        return;
-                    }
-                    "q" => {
-                        print!("\"");
-                    }
-                    _ => {}
-                }
-            }
-            {
-                let mut node = node.first_child();
-                while let Some(child) = node {
-                    display(terminal, &child, depth + 1, area);
-                    node = child.next_sibling();
-                }
-            }
-            if data.name.prefix == None {
-                match &*data.name.local {
-                    "a" => {
-                        let attrs = data.attributes.borrow();
-                        let href = attrs.get("href");
-                        if let Some(href) = href {
-                            print!(r#"<{}>"#, href);
-                        } else {
-                            print!("<>");
-                        }
-                    }
-                    "q" => {
-                        print!("\"");
-                    }
-                    _ => {}
-                }
+            let mut node = node.first_child();
+            while let Some(child) = node {
+                display(terminal, &child, depth + 1, area);
+                node = child.next_sibling();
             }
         }
         _ => {
@@ -108,4 +69,8 @@ pub fn display(terminal: &mut Terminal<TermionBackend<Stdout>>, node: &Node, dep
             f.render_widget(paragraph, widget.area);
         }
     }).unwrap();
+
+    // Wait for user input before closing the application
+    let stdin = std::io::stdin();
+    let _event = stdin.lock().read_line(&mut String::new());
 }
