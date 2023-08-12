@@ -1,63 +1,54 @@
 use kuchiki::{Node, NodeData};
-use termion::style;
+use tui::layout::{Rect};
+use tui::widgets::Paragraph;
+use tui::widgets::Block;
+use tui::widgets::Borders;
+use tui::layout::Layout;
+use tui::layout::Direction;
+use tui::layout::Constraint;
 
-#[derive(Copy, Clone, Debug, Default)]
-pub struct Style {
-    bold: u32,
-    italic: u32,
-    underline: u32,
-    preformatted: bool,
+use tui::backend::TermionBackend;
+use tui::Terminal;
+
+use std::io::{Stdout};
+
+#[derive(Debug)]
+struct Widget {
+    content: String,
+    area: Rect,
 }
 
-impl Style {
-    fn show(&self) {
-        print!("{}", style::Reset);
-        match self.bold {
-            0 => {}
-            _ => print!("{}", style::Bold),
-        }
-        match self.italic {
-            0 => {}
-            _ => print!("{}", style::Italic),
-        }
-        match self.underline {
-            0 => {}
-            _ => print!("{}", style::Underline),
-        }
-    }
-}
-
-pub fn display(node: &Node, depth: u32, style: Style) {
-    style.show();
+pub fn display(terminal: &mut Terminal<TermionBackend<Stdout>>, node: &Node, depth: u32, area: &mut Rect) {
+    // style.show();
+    let mut widgets: Vec<Widget> = vec![];
     match node.data() {
         NodeData::Text(contents) => {
-            if !style.preformatted {
-                let contents = &**contents.borrow();
-                let contents = contents.split_whitespace().collect::<Vec<_>>().join(" ");
-                print!("{} ", contents);
-            } else {
-                print!("{}", contents.borrow());
-            }
+            let contents = &**contents.borrow();
+            let contents = contents.split_whitespace().collect::<Vec<_>>().join(" ");
+
+            let chunks = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints(
+                    [
+                        Constraint::Percentage(5),
+                        Constraint::Max(1),
+                        Constraint::Min(1),
+                    ]
+                        .as_ref(),
+                )
+                .split(*area);
+
+            *area = chunks[2];
+
+            let widget = Widget {
+                area: chunks[0],
+                content: contents,
+            };
+            widgets.push(widget);
         }
         NodeData::Element(ref data) => {
-            let mut new_style = style;
             if data.name.prefix == None {
                 match &*data.name.local {
-                    "b" | "strong" | "h1" | "h2" | "h3" | "h4" => {
-                        new_style.bold += 1;
-                    }
-                    "i" | "em" => {
-                        new_style.italic += 1;
-                    }
-                    "a" | "u" => {
-                        new_style.underline += 1;
-                    }
-                    "p" | "div" => {
-                        println!("");
-                    }
-                    "li" => {
-                        print!("\n * ");
-                    }
                     "img" => {
                         let attrs = data.attributes.borrow();
                         let alt = attrs.get("alt");
@@ -67,9 +58,6 @@ pub fn display(node: &Node, depth: u32, style: Style) {
                             print!("<img>");
                         }
                         return;
-                    }
-                    "pre" | "textarea" => {
-                        new_style.preformatted = true;
                     }
                     "script" | "head" | "style" => {
                         return;
@@ -83,7 +71,7 @@ pub fn display(node: &Node, depth: u32, style: Style) {
             {
                 let mut node = node.first_child();
                 while let Some(child) = node {
-                    display(&child, depth + 1, new_style);
+                    display(terminal, &child, depth + 1, area);
                     node = child.next_sibling();
                 }
             }
@@ -104,14 +92,20 @@ pub fn display(node: &Node, depth: u32, style: Style) {
                     _ => {}
                 }
             }
-            style.show()
         }
         _ => {
             let mut node = node.first_child();
             while let Some(child) = node {
-                display(&child, depth + 1, style);
+                display(terminal, &child, depth + 1, area);
                 node = child.next_sibling();
             }
         }
     }
+    terminal.draw(|f| {
+        // Render this widget's content
+        for widget in widgets {
+            let paragraph = Paragraph::new(widget.content).block(Block::default().borders(Borders::ALL));
+            f.render_widget(paragraph, widget.area);
+        }
+    }).unwrap();
 }

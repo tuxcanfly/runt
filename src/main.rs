@@ -1,9 +1,11 @@
 extern crate clap;
-use std::default::Default;
 
 use clap::{App, Arg};
 
 use url::Url;
+
+use tui::Terminal;
+use tui::backend::TermionBackend;
 
 mod display;
 mod fetcher;
@@ -30,11 +32,19 @@ async fn main() -> Result<(), anyhow::Error> {
             )
             .get_matches();
 
+    // Initialize the terminal backend
+    let stdout = std::io::stdout();
+    let backend = TermionBackend::new(stdout);
+    let mut terminal = Terminal::new(backend)?;
+
+    terminal.clear()?;
+    let  area = &mut terminal.size().unwrap();
+
     if let Some(url) = matches.value_of("url") {
         match Url::parse(&prepend_https(url)) {
             Ok(parsed_url) => {
                 let page = page::fetch(parsed_url).await?;
-                display::display(&page.document, 0, Default::default());
+                display::display(&mut terminal, &page.document, 0, area);
                 println!("");
             }
             Err(err) => {
