@@ -19,7 +19,7 @@ struct Widget {
     area: Rect,
 }
 
-pub fn display(terminal: &mut Terminal<TermionBackend<Stdout>>, node: &Node, depth: u32, area: &mut Rect) {
+pub fn display(terminal: &mut Terminal<TermionBackend<Stdout>>, node: &Node, depth: u32, area: &mut Rect, debug: bool) {
     // style.show();
     let mut widgets: Vec<Widget> = vec![];
     match node.data() {
@@ -50,26 +50,18 @@ pub fn display(terminal: &mut Terminal<TermionBackend<Stdout>>, node: &Node, dep
         NodeData::Element(ref data) => {
             let mut node = node.first_child();
             while let Some(child) = node {
-                display(terminal, &child, depth + 1, area);
+                display(terminal, &child, depth + 1, area, debug);
                 node = child.next_sibling();
             }
         }
         _ => {
             let mut node = node.first_child();
             while let Some(child) = node {
-                display(terminal, &child, depth + 1, area);
+                display(terminal, &child, depth + 1, area, debug);
                 node = child.next_sibling();
             }
         }
     }
-    terminal.draw(|f| {
-        // Render this widget's content
-        for widget in widgets {
-            let paragraph = Paragraph::new(widget.content).block(Block::default().borders(Borders::ALL));
-            f.render_widget(paragraph, widget.area);
-        }
-    }).unwrap();
-
     // Wait for user input before closing the application
     let stdin = std::io::stdin();
     let _event = stdin.lock().read_line(&mut String::new());

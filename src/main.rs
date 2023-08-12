@@ -23,6 +23,13 @@ fn prepend_https(url: &str) -> String {
 async fn main() -> Result<(), anyhow::Error> {
     let matches = App::new("Runt terminal-based web browser")
         .arg(
+            Arg::with_name("debug")
+                .short("d")
+                .long("debug")
+                .help("Enable debug mode")
+                .takes_value(false),
+        )
+        .arg(
             Arg::with_name("url")
                 .short("u")
                 .long("url")
@@ -39,12 +46,13 @@ async fn main() -> Result<(), anyhow::Error> {
 
     terminal.clear()?;
     let  area = &mut terminal.size().unwrap();
+    let debug = matches.is_present("debug");
 
     if let Some(url) = matches.value_of("url") {
         match Url::parse(&prepend_https(url)) {
             Ok(parsed_url) => {
                 let page = page::fetch(parsed_url).await?;
-                display::display(&mut terminal, &page.document, 0, area);
+                display::display(&mut terminal, &page.document, 0, area, debug);
                 println!("");
             }
             Err(err) => {
