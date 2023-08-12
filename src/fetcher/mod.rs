@@ -55,7 +55,7 @@ impl Fetcher {
         max_redirects: u16,
     ) -> Result<Data, Error> {
         let fetcher = self;
-        let data = fetcher.get(&url).await?;
+        let mut data = fetcher.get(&url).await?;
         for i in 0..max_redirects {
             match data {
                 Data::File(_) => return Ok(data),
@@ -63,6 +63,7 @@ impl Fetcher {
                     if request.status().is_redirection() && max_redirects > 0 {
                         if let Some(new_url) = request.headers().get(hyper::header::LOCATION) {
                             url = url.join(new_url.to_str().map_err(anyhow::Error::from)?)?;
+                            data = fetcher.get(&url).await?;
                         } else {
                             return Ok(data);
                         }
