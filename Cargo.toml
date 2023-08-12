@@ -17,3 +17,4 @@ tokio = { version = "1.27.0", features = ["full"] }
 url = "2.3.1"
 kuchiki = "0.8.1"
 anyhow = "1.0.70"
+clap = "2.33.0"
