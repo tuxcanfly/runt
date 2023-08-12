@@ -9,6 +9,14 @@ mod display;
 mod fetcher;
 mod page;
 
+fn prepend_https(url: &str) -> String {
+    if url.starts_with("http://") || url.starts_with("https://") {
+        url.to_string()
+    } else {
+        format!("https://{}", url)
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
     let matches = App::new("Runt terminal-based web browser")
@@ -23,9 +31,8 @@ async fn main() -> Result<(), anyhow::Error> {
             .get_matches();
 
     if let Some(url) = matches.value_of("url") {
-        match Url::parse(url) {
+        match Url::parse(&prepend_https(url)) {
             Ok(parsed_url) => {
-                println!("Parsed URL: {:?}", parsed_url);
                 let page = page::fetch(parsed_url).await?;
                 display::display(&page.document, 0, Default::default());
                 println!("");
