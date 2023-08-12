@@ -27,22 +27,11 @@ pub fn display(terminal: &mut Terminal<TermionBackend<Stdout>>, node: &Node, dep
             let contents = &**contents.borrow();
             let contents = contents.split_whitespace().collect::<Vec<_>>().join(" ");
 
-            let chunks = Layout::default()
-                .direction(Direction::Vertical)
-                .constraints(
-                    [
-                        Constraint::Percentage(5),
-                        Constraint::Max(1),
-                        Constraint::Min(1),
-                    ]
-                        .as_ref(),
-                )
-                .split(*area);
-
-            *area = chunks[2];
-
+            if debug {
+                println!("{}\n", contents);
+            }
             let widget = Widget {
-                area: chunks[0],
+                area: *area, // TODO fix overwrite
                 content: contents,
             };
             widgets.push(widget);
@@ -62,7 +51,14 @@ pub fn display(terminal: &mut Terminal<TermionBackend<Stdout>>, node: &Node, dep
             }
         }
     }
-    // Wait for user input before closing the application
-    let stdin = std::io::stdin();
-    let _event = stdin.lock().read_line(&mut String::new());
+    if !debug {
+        terminal.draw(|f| {
+            let paragraph = Paragraph::new("Hello world!").block(Block::default().borders(Borders::ALL));
+            f.render_widget(paragraph, *area);
+        }).unwrap();
+
+        // Wait for user input before closing the application
+        let stdin = std::io::stdin();
+        let _event = stdin.lock().read_line(&mut String::new());
+    }
 }

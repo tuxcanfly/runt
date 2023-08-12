@@ -12,7 +12,7 @@ mod fetcher;
 mod page;
 
 fn prepend_https(url: &str) -> String {
-    if url.starts_with("http://") || url.starts_with("https://") {
+    if url.starts_with("http://") || url.starts_with("https://") || url.starts_with("file://") {
         url.to_string()
     } else {
         format!("https://{}", url)
