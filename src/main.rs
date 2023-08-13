@@ -59,8 +59,8 @@ async fn main() -> Result<(), anyhow::Error> {
                 let mut widgets = vec![];
                 display::display(&page.document, 0, &mut widgets);
 
-                widgets.sort_unstable_by_key(|widget: &display::Widget| widget.content.len());
-                widgets.reverse();
+                // widgets.sort_unstable_by_key(|widget: &display::Widget| widget.content.len());
+                // widgets.reverse();
 
                 let mut constraints = vec![];
                 for widget in &widgets {

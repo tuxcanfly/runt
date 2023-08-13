@@ -10,7 +10,7 @@ pub fn display(node: &Node, depth: u32, widgets: &mut Vec<Widget>) {
         NodeData::Text(contents) => {
             let contents = &**contents.borrow();
             let contents = contents.split_whitespace().collect::<Vec<_>>().join(" ");
-            if contents == "" {
+            if contents.len() < 20 {
                 return
             }
             let widget = Widget {
