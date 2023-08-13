@@ -19,6 +19,20 @@ struct Widget {
     area: Rect,
 }
 
+pub fn split(area: Rect, dir: tui::layout::Direction, ratio: (u16, u16)) -> Vec<Rect> {
+    Layout::default()
+        .direction(dir)
+        .margin(1)
+        .constraints(
+            [
+                Constraint::Percentage(ratio.0),
+                Constraint::Percentage(ratio.1),
+            ]
+                .as_ref(),
+        )
+        .split(area)
+}
+
 pub fn display(terminal: &mut Terminal<TermionBackend<Stdout>>, node: &Node, depth: u32, area: &mut Rect, debug: bool) {
     // style.show();
     let mut widgets: Vec<Widget> = vec![];
@@ -28,10 +42,13 @@ pub fn display(terminal: &mut Terminal<TermionBackend<Stdout>>, node: &Node, dep
             let contents = contents.split_whitespace().collect::<Vec<_>>().join(" ");
 
             if debug {
-                println!("{}\n", contents);
+                println!("{}", contents);
             }
+            let rects = split(*area, Direction::Horizontal, (50, 50));
+            let top = rects[0];
+            *area = rects[1];
             let widget = Widget {
-                area: *area, // TODO fix overwrite
+                area: top, // TODO fix overwrite
                 content: contents,
             };
             widgets.push(widget);
@@ -53,8 +70,10 @@ pub fn display(terminal: &mut Terminal<TermionBackend<Stdout>>, node: &Node, dep
     }
     if !debug {
         terminal.draw(|f| {
-            let paragraph = Paragraph::new("Hello world!").block(Block::default().borders(Borders::ALL));
-            f.render_widget(paragraph, *area);
+            for widget in widgets {
+                let paragraph = Paragraph::new(widget.content).block(Block::default().borders(Borders::ALL));
+                f.render_widget(paragraph, widget.area);
+            }
         }).unwrap();
 
         // Wait for user input before closing the application
