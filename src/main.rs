@@ -10,12 +10,18 @@ use tui::backend::TermionBackend;
 use tui::widgets::Block;
 use tui::widgets::Borders;
 use tui::widgets::Paragraph;
+use tui::widgets::Wrap;
+
+use tui::layout::Layout;
+use tui::layout::Direction;
+use tui::layout::Constraint;
 
 use std::io::BufRead;
 
 mod display;
 mod fetcher;
 mod page;
+
 
 fn prepend_https(url: &str) -> String {
     if url.starts_with("http://") || url.starts_with("https://") || url.starts_with("file://") {
@@ -44,18 +50,35 @@ async fn main() -> Result<(), anyhow::Error> {
     let mut terminal = Terminal::new(backend)?;
 
     terminal.clear()?;
-    let  area = &mut terminal.size().unwrap();
+    let  area = terminal.size().unwrap();
 
     if let Some(url) = matches.value_of("url") {
         match Url::parse(&prepend_https(url)) {
             Ok(parsed_url) => {
                 let page = page::fetch(parsed_url).await?;
                 let mut widgets = vec![];
-                display::display(&page.document, 0, &mut widgets, area);
+                display::display(&page.document, 0, &mut widgets);
+
+                widgets.sort_unstable_by_key(|widget: &display::Widget| widget.content.len());
+                widgets.reverse();
+
+                let mut constraints = vec![];
+                for widget in &widgets {
+                    constraints.push(Constraint::Min(10));
+                }
+
+                let chunks = Layout::default()
+                    .direction(Direction::Vertical)
+                    .margin(1)
+                    .constraints(constraints).split(area);
+                let mut layout = vec![];
+                for i in 0..chunks.len() {
+                    layout.push((&widgets[i], chunks[i]));
+                }
                 terminal.draw(|f| {
-                    for widget in widgets {
-                        let paragraph = Paragraph::new(widget.content).block(Block::default().borders(Borders::ALL));
-                        f.render_widget(paragraph, widget.area);
+                    for (widget, chunk) in layout {
+                        let paragraph = Paragraph::new(widget.content.clone()).block(Block::default().borders(Borders::ALL)).wrap(Wrap { trim: true });
+                        f.render_widget(paragraph, chunk);
                     }
                 }).unwrap();
             }
