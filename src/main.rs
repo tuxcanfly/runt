@@ -7,6 +7,12 @@ use url::Url;
 use tui::Terminal;
 use tui::backend::TermionBackend;
 
+use tui::widgets::Block;
+use tui::widgets::Borders;
+use tui::widgets::Paragraph;
+
+use std::io::BufRead;
+
 mod display;
 mod fetcher;
 mod page;
@@ -22,13 +28,6 @@ fn prepend_https(url: &str) -> String {
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
     let matches = App::new("Runt terminal-based web browser")
-        .arg(
-            Arg::with_name("debug")
-                .short("d")
-                .long("debug")
-                .help("Enable debug mode")
-                .takes_value(false),
-        )
         .arg(
             Arg::with_name("url")
                 .short("u")
@@ -46,19 +45,27 @@ async fn main() -> Result<(), anyhow::Error> {
 
     terminal.clear()?;
     let  area = &mut terminal.size().unwrap();
-    let debug = matches.is_present("debug");
 
     if let Some(url) = matches.value_of("url") {
         match Url::parse(&prepend_https(url)) {
             Ok(parsed_url) => {
                 let page = page::fetch(parsed_url).await?;
-                display::display(&mut terminal, &page.document, 0, area, debug);
-                println!("");
+                let mut widgets = vec![];
+                display::display(&page.document, 0, &mut widgets, area);
+                terminal.draw(|f| {
+                    for widget in widgets {
+                        let paragraph = Paragraph::new(widget.content).block(Block::default().borders(Borders::ALL));
+                        f.render_widget(paragraph, widget.area);
+                    }
+                }).unwrap();
             }
             Err(err) => {
                 println!("failed to parse urL: {}", err);
             }
         }
     }
+    // Wait for user input before closing the application
+    let stdin = std::io::stdin();
+    let _event = stdin.lock().read_line(&mut String::new())?;
     Ok(())
 }
